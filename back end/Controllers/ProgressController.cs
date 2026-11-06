@@ -1,7 +1,6 @@
 ﻿// File: Controllers/ProgressController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using School_Project_API.Data.Config;
 using School_Project_API.DTO;
 using School_Project_API.Services.Interfaces;
 

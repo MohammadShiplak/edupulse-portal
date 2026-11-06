@@ -7,6 +7,15 @@ namespace School_Project_API.Hubs
     [Authorize]
     public class NotificationHub : Hub
     {
+
+        private readonly ILogger<NotificationHub> _logger;  
+
+        public NotificationHub(ILogger<NotificationHub> logger)
+        {
+            _logger = logger;
+        }   
+
+
         public override async Task OnConnectedAsync()
         {
             try
@@ -33,8 +42,8 @@ namespace School_Project_API.Hubs
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ ERROR in OnConnectedAsync: {ex.Message}");
-           
+                _logger.LogError(ex, "Error in OnConnectedAsync");  
+
                 throw;
             }
         }

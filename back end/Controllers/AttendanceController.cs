@@ -9,26 +9,20 @@ namespace School_Project_API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class AttendanceController : ControllerBase
+    public class AttendanceController(IAttendanceService attendanceService) : ControllerBase
     {
-        private readonly IAttendanceService _attendanceService;
-
-        public AttendanceController(IAttendanceService attendanceService)
-        {
-            _attendanceService = attendanceService;
-        }
-
+       
         [HttpGet]
         public async Task<ActionResult<List<AttendanceDTO>>> GetAllAttendance()
         {
-            var attendance = await _attendanceService.GetAllAttendancesAsync();
+            var attendance = await attendanceService.GetAllAttendancesAsync();
             return Ok(attendance);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<AttendanceDTO>> GetAttendanceById(int id)
         {
-            var attendance = await _attendanceService.GetAttendanceByIdAsync(id);
+            var attendance = await attendanceService.GetAttendanceByIdAsync(id);
 
             if (attendance == null)
                 return NotFound($"Attendance with Id {id} was not found");
@@ -39,14 +33,14 @@ namespace School_Project_API.Controllers
         [HttpGet("date/{date}")]
         public async Task<ActionResult<List<AttendanceDTO>>> GetAttendanceByDate(DateTime date)
         {
-            var attendance = await _attendanceService.GetAttendanceByDateAsync(date);
+            var attendance = await attendanceService.GetAttendanceByDateAsync(date);
             return Ok(attendance);
         }
 
         [HttpGet("student/{studentId}")]
         public async Task<ActionResult<List<AttendanceDTO>>> GetAttendanceByStudent(int studentId)
         {
-            var attendance = await _attendanceService.GetAttendanceByStudentAsync(studentId);
+            var attendance = await attendanceService.GetAttendanceByStudentAsync(studentId);
             return Ok(attendance);
         }
 
@@ -56,7 +50,7 @@ namespace School_Project_API.Controllers
         {
             try
             {
-                var createdAttendance = await _attendanceService.AddAttendanceAsync(attendanceDTO);
+                var createdAttendance = await attendanceService.AddAttendanceAsync(attendanceDTO);
 
                 if (createdAttendance == null)
                     return NotFound($"Student with Id {attendanceDTO.StudentId} was not found");
@@ -79,7 +73,7 @@ namespace School_Project_API.Controllers
             int id,
             AttendanceDTO attendanceDTO)
         {
-            var updatedAttendance = await _attendanceService.UpdateAttendanceAsync(id, attendanceDTO);
+            var updatedAttendance = await attendanceService.UpdateAttendanceAsync(id, attendanceDTO);
 
             if (updatedAttendance == null)
                 return NotFound($"Attendance with Id {id} was not found");
@@ -91,7 +85,7 @@ namespace School_Project_API.Controllers
    
         public async Task<IActionResult> DeleteAttendance(int id)
         {
-            var deleted = await _attendanceService.DeleteAttendanceAsync(id);
+            var deleted = await attendanceService.DeleteAttendanceAsync(id);
 
             if (!deleted)
                 return NotFound($"Attendance with Id {id} was not found");

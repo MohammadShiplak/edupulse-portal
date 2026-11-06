@@ -942,6 +942,10 @@ namespace School_Project_API.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
+                    b.Property<string>("ParentEmail")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(250)

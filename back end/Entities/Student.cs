@@ -11,7 +11,7 @@ namespace School_Project_API.Entities
      
         public int Id { get; set; }
 
-
+        public string? ParentEmail { get; set; }
         public string? FirstName { get; set; }
 
         public string? LastName { get; set; }

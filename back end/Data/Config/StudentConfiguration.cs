@@ -49,6 +49,11 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
           .IsRequired()
           .HasMaxLength(250);
 
+        builder.Property(s => s.ParentEmail)
+       .HasMaxLength(250)
+       .IsRequired(false); // nullable — not every student has one on file yet
+
+
 
         // ── 1:1 ──────────────────────────────────────────────
         // One Student → One AccessCard

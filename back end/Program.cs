@@ -7,17 +7,41 @@ using System.Text;
 using School_Project_API.Services;
 using School_Project_API.Services.Interfaces;
 using School_Project_API.Hubs;
-using School_Project_API.Data.Config;
 using School_Project_API.Entities;
 
 using SchoolManagementSystem.API.Services;
+using Hangfire;
+using Hangfire.SqlServer;
+using School_Project_API.options;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── DbContext ─────────────────────────────────────────────────
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration
-        .GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+{
+    var settings = serviceProvider
+        .GetRequiredService<IOptions<ConnectionStringsSettings>>()
+        .Value;
+
+    options.UseSqlServer(settings.DefaultConnection);
+});
+
+builder.Services.AddOptions<JwtSettings>()
+    .Bind(builder.Configuration.GetSection("jwt"))
+    .Validate(s => !string.IsNullOrEmpty(s.Key), "JWT key is required")
+    .ValidateOnStart();
+
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
+builder.Services.Configure<GeminiSettings>(
+    builder.Configuration.GetSection("Gemini"));
+
+builder.Services.Configure<ConnectionStringsSettings>(
+    builder.Configuration.GetSection("ConnectionStrings"));
+
+
 
 // ── Services ──────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -122,6 +146,45 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        new SqlServerStorageOptions
+        {
+            // WHY these options specifically?
+            //   CommandBatchMaxTimeout / QueuePollInterval control how
+            //   aggressively Hangfire polls the DB for new jobs. Defaults are
+            //   fine for a learning project — don't over-tune prematurely.
+            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+            QueuePollInterval = TimeSpan.Zero, // uses SQL Server's Query Notifications (efficient)
+            UseRecommendedIsolationLevel = true,
+            DisableGlobalLocks = true
+        }));
+
+// WHY a separate server registration?
+//   AddHangfire() configures the CLIENT (how to enqueue jobs).
+//   AddHangfireServer() starts the actual WORKER that processes the queue.
+//   Without this line, jobs get added to the table but NOTHING ever picks them up.
+builder.Services.AddHangfireServer();
+
+// Register your new service (same pattern as every other service in Program.cs)
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+
+
+
+
+
+
+
+
+
+
 var app = builder.Build();
 
 // ── Middleware Pipeline ───────────────────────────────────────
@@ -139,4 +202,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.UseHangfireDashboard("/hangfire");
 app.Run();

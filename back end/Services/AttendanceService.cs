@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using School_Project_API.DTO;
 using School_Project_API.Entities;
 using School_Project_API.Services.Interfaces;
@@ -11,11 +12,13 @@ namespace School_Project_API.Services
 
       private readonly INotificationService _notificationService;
         private readonly IAttendanceAlertService _alertService;
-        public AttendanceService(ApplicationDbContext context, INotificationService notificationService, IAttendanceAlertService alertService)
+        private readonly IBackgroundJobClient _backgroundJobClient;
+        public AttendanceService(ApplicationDbContext context, INotificationService notificationService, IAttendanceAlertService alertService, IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _notificationService = notificationService;
             _alertService = alertService;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         private static AttendanceDTO MapToDTO(Attendance attendance)
@@ -78,8 +81,25 @@ namespace School_Project_API.Services
                 _context.Attendances.Add(attendance);
                 await _context.SaveChangesAsync();
 
-                // ── Step 5: Load student name for response ────────────────────
-                await _context.Entry(attendance)
+
+            if (attendance.Status == AttendanceStatus.Absent)
+            {
+                // WHY enqueue AFTER SaveChangesAsync, not before?
+                //   The job re-fetches the attendance record by Id (Step 3 above).
+                //   If we enqueued BEFORE saving, the worker might run the job
+                //   before the record even exists in the database — the guard
+                //   clause in EmailService would then skip it (a silent bug that's
+                //   hard to reproduce, since it depends on timing).
+                //   Rule of thumb: enqueue background work only AFTER the state
+                //   it depends on is durably saved.
+                _backgroundJobClient.Enqueue<IEmailService>(
+                    emailService => emailService.SendAbsenceEmailAsync(attendance.Id));
+            }
+
+
+
+            // ── Step 5: Load student name for response ────────────────────
+            await _context.Entry(attendance)
                      .Reference(a => a.Student)
                      .LoadAsync();
 

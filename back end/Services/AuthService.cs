@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using School_Project_API.DTO;
 using School_Project_API.Entities;
+using School_Project_API.options;
 using School_Project_API.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -14,13 +16,13 @@ namespace School_Project_API.Services
     {
         private readonly ApplicationDbContext _context;
 
-        private readonly IConfiguration _configuration;
+        private readonly JwtSettings _jwtSettings;
 
         private readonly IWebHostEnvironment _environment;
-        public AuthService(ApplicationDbContext context, IConfiguration configuration, IWebHostEnvironment environment)
+        public AuthService(ApplicationDbContext context,IOptions<JwtSettings> jwtOptions  ,IWebHostEnvironment environment)
         {
             _context = context;
-            _configuration = configuration;
+             _jwtSettings = jwtOptions.Value;   
             _environment = environment;
 
 
@@ -61,16 +63,16 @@ namespace School_Project_API.Services
             };
 
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                Encoding.UTF8.GetBytes(_jwtSettings.Key));
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _jwtSettings.Issuer,
+                audience: _jwtSettings.Audience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(
-                    double.Parse(_configuration["Jwt:ExpirationMinutes"])),
+                    (_jwtSettings.ExpirationMinutes)),
                 signingCredentials: creds
             );
 
